@@ -69,11 +69,13 @@ export async function callGM(ctx: GMContext, playerInput: string): Promise<GMRes
 
   // Try the frontier model first, with a bounded timeout so a slow/hung call
   // falls back to the deterministic engine promptly (never bricks the session).
-  // 25s is enough for a healthy Ox Alpha reply; beyond that the offline engine
-  // keeps the game moving rather than leaving the player staring at the orb.
+  // Ox Alpha is a reasoning model with ~22 tok/s throughput; a full narration
+  // can take 15-45s. 60s is a healthy ceiling that lets real frontier output
+  // finish while still recovering from a genuinely hung call. The session's
+  // finally-block guarantees setProcessing(false) regardless, so no freeze.
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 25000); // 25s cap
+    const timer = setTimeout(() => ctrl.abort(), 60000); // 60s cap
 
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
