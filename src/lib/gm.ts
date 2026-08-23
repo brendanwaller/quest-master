@@ -59,18 +59,28 @@ function buildUserPrompt(ctx: GMContext, playerInput: string): string {
 }
 
 export async function callGM(ctx: GMContext, playerInput: string): Promise<GMResponse> {
-  // Try the frontier model first, with a hard timeout so a slow/hung call
-  // always falls back to the deterministic engine (never bricks the session).
+  // If no API key is configured, don't waste the frontier timeout (up to 60s)
+  // before falling back. Go straight to the deterministic engine.
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
+  if (!apiKey) {
+    const fb = fallbackGM(ctx, playerInput);
+    return { ...fb, fromFallback: true };
+  }
+
+  // Try the frontier model first, with a bounded timeout so a slow/hung call
+  // falls back to the deterministic engine promptly (never bricks the session).
+  // 25s is enough for a healthy Ox Alpha reply; beyond that the offline engine
+  // keeps the game moving rather than leaving the player staring at the orb.
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 60000); // 60s cap
+    const timer = setTimeout(() => ctrl.abort(), 25000); // 25s cap
 
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       signal: ctrl.signal,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY || ""}`,
+        Authorization: `Bearer ${apiKey}`,
         "X-Title": "Quest Master",
       },
       body: JSON.stringify({
