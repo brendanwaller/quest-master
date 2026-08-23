@@ -12,6 +12,7 @@ export interface GMResponse {
   narration: string;
   effects: EffectRequest[];
   quickChoices: { label: string; prompt: string; icon: string }[];
+  fromFallback: boolean;
 }
 
 interface GMContext {
@@ -103,10 +104,12 @@ export async function callGM(ctx: GMContext, playerInput: string): Promise<GMRes
       narration: parsed.narration,
       effects: (parsed.effects ?? []).slice(0, 6),
       quickChoices: (parsed.quickChoices ?? []).slice(0, 3),
+      fromFallback: false,
     };
   } catch (e) {
     console.warn("[gm] frontier unavailable, falling back to engine:", e);
-    return fallbackGM(ctx, playerInput);
+    const fb = fallbackGM(ctx, playerInput);
+    return { ...fb, fromFallback: true };
   }
 }
 
@@ -115,7 +118,7 @@ function stripFences(s: string): string {
 }
 
 // ---- Deterministic fallback engine (Hollow Mine adventure) -----------------
-function fallbackGM(ctx: GMContext, playerInput: string): GMResponse {
+function fallbackGM(ctx: GMContext, playerInput: string): Omit<GMResponse, "fromFallback"> {
   const lower = playerInput.toLowerCase();
   const hero = ctx.characters[0];
   const name = hero?.name || "Hero";

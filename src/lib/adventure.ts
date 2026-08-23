@@ -20,7 +20,7 @@ export interface SceneNode {
 export const ENEMY_LIBRARY: Record<string, Enemy> = {
   goblin_snack: {
     id: "goblin_snack", name: "Goblin Pickpocket", threat: "cute", hp: 5, maxHp: 5,
-    emoji: "👺", desc: "A scrawny goblin with a stolen cookie bag, more mischievous than mean.",
+    emoji: "👺", art: "/enemies/goblin_snack.jpg", desc: "A scrawny goblin with a stolen cookie bag, more mischievous than mean.",
     moves: ["Sneaky nibble", "Tickle dart"],
   },
   goblin_brute: {
@@ -30,12 +30,12 @@ export const ENEMY_LIBRARY: Record<string, Enemy> = {
   },
   slime_jelly: {
     id: "slime_jelly", name: "Mine Slime", threat: "cute", hp: 6, maxHp: 6,
-    emoji: "🫧", desc: "A jiggly purple slime that glows faintly and boings when poked.",
+    emoji: "🫧", art: "/enemies/slime_jelly.jpg", desc: "A jiggly purple slime that glows faintly and boings when poked.",
     moves: ["Boing tackle", "Sticky plop"],
   },
   cave_wolf: {
     id: "cave_wolf", name: "Cave Wolf", threat: "menace", hp: 7, maxHp: 7,
-    emoji: "🐺", desc: "A shaggy wolf with glowing amber eyes, guarding its den.",
+    emoji: "🐺", art: "/enemies/cave_wolf.jpg", desc: "A shaggy wolf with glowing amber eyes, guarding its den.",
     moves: ["Swift nip", "Howling cry"],
   },
   quartz_ghost: {
@@ -55,12 +55,12 @@ export const ENEMY_LIBRARY: Record<string, Enemy> = {
   },
   troll_moss: {
     id: "troll_moss", name: "Moss Troll", threat: "intimidating", hp: 14, maxHp: 14,
-    emoji: "🧌", desc: "A sleepy moss-covered troll blocking the bridge. Asks riddles, not fights.",
+    emoji: "🧌", art: "/enemies/troll_moss.jpg", desc: "A sleepy moss-covered troll blocking the bridge. Asks riddles, not fights.",
     moves: ["Rumble step", "Riddle glare"],
   },
   ember_drake: {
     id: "ember_drake", name: "Ember Drake", threat: "intimidating", hp: 16, maxHp: 16,
-    emoji: "🐉", desc: "The young dragon at the heart of the Hollow Mine, guarding a warm glowing gem.",
+    emoji: "🐉", art: "/enemies/ember_drake.jpg", desc: "The young dragon at the heart of the Hollow Mine, guarding a warm glowing gem.",
     moves: ["Warm puff", "Tail sweep", "Roaring yawn"],
   },
 };

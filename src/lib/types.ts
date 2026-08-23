@@ -140,7 +140,8 @@ export interface Enemy {
   threat: "cute" | "menace" | "intimidating";
   hp: number;
   maxHp: number;
-  emoji: string; // composite art placeholder (transparent PNG in prod)
+  emoji: string; // fallback glyph if art not loaded
+  art?: string;  // composited transparent/isolated art path (public/enemies)
   desc: string;
   moves: string[];
 }

@@ -18,6 +18,17 @@ import {
 } from "../lib/voice";
 import { useAuth } from "../hooks/useAuth";
 
+// Module-level cache of loaded enemy art (keyed by asset path).
+// The orb's continuous rAF loop reads this every frame, so once an image
+// finishes loading it is picked up on the next frame automatically.
+const enemyArtCache = new Map<string, HTMLImageElement>();
+function preloadEnemyArt(path: string | undefined) {
+  if (!path || enemyArtCache.has(path)) return;
+  const img = new Image();
+  img.onload = () => enemyArtCache.set(path, img);
+  img.src = path;
+}
+
 // ---- Orb canvas: voice-reactive, state-driven, enemy-composited -------------
 function useOrb(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -103,9 +114,25 @@ function useOrb(
         const bob = Math.sin(t * 2) * 4;
         ctx.save();
         ctx.beginPath(); ctx.arc(cx, cy, 100, 0, Math.PI * 2); ctx.clip();
-        ctx.font = "76px serif";
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(active.emoji, cx, cy + bob + 8);
+        const art = enemyArtCache.get(active.art ?? "");
+        if (art && active.art) {
+          // Draw the creature art filling the 100px inner frame.
+          // The art has a dark midnight bg; clip to the orb circle + darken edges
+          // so it sits inside the orb like a magic window.
+          ctx.globalAlpha = 0.96;
+          ctx.drawImage(art, cx - 100, cy - 100, 200, 200);
+          ctx.globalAlpha = 1;
+          // soft inner vignette so it reads as inside the orb
+          const vig = ctx.createRadialGradient(cx, cy, 20, cx, cy, 100);
+          vig.addColorStop(0, "rgba(0,0,0,0)");
+          vig.addColorStop(1, "rgba(6,4,16,0.55)");
+          ctx.fillStyle = vig;
+          ctx.fillRect(cx - 100, cy - 100, 200, 200);
+        } else {
+          ctx.font = "76px serif";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(active.emoji, cx, cy + bob + 8);
+        }
         // enemy nameplate
         ctx.font = "bold 15px Georgia, serif";
         ctx.fillStyle = "rgba(242,234,216,0.92)";
@@ -197,7 +224,10 @@ export function SessionPage() {
     const firstEnemy = (Object.values(HOLLOW_MINE.nodes).find((n) => n.enemies.length))?.enemies[0];
     if (!gs.enemies.length && firstEnemy) {
       const e = ENEMY_LIBRARY[firstEnemy];
-      if (e) setActiveEnemy({ ...e, hp: e.maxHp, maxHp: e.maxHp });
+      if (e) {
+        preloadEnemyArt(e.art);
+        setActiveEnemy({ ...e, hp: e.maxHp, maxHp: e.maxHp });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -249,6 +279,7 @@ export function SessionPage() {
       for (const ev of result.events) emitEvent(ev.kind, ev.entityId);
       // update active enemy from resolved state
       if (result.state.enemies.length) {
+        preloadEnemyArt(result.state.enemies[0].art);
         setActiveEnemy(result.state.enemies[0]);
       }
       if (result.rollResult) {
@@ -283,17 +314,19 @@ export function SessionPage() {
       activeEnemy,
     };
 
-    // if an enemy is active and player attacks, prioritize combat resolution
-    let resp: GMResponse;
     try {
-      resp = await callGM(ctx, input);
-      setEngineMode("frontier");
-    } catch {
-      resp = await callGM(ctx, input); // both paths return, gm.ts falls back internally
-      setEngineMode("fallback");
+      // callGM internally falls back to the deterministic engine on any
+      // frontier error or timeout, so it always resolves with a response.
+      const resp = await callGM(ctx, input);
+      setEngineMode(resp.fromFallback ? "fallback" : "frontier");
+      await handleGMResponse(input, resp);
+    } catch (e) {
+      console.error("[session] GM loop failed:", e);
+      // Surface a gentle error rather than freezing the session.
+      pushExchange("gm", "The orb flickers and hums, trying to find the story again. Give it another moment and try again.");
+    } finally {
+      setProcessing(false);
     }
-    await handleGMResponse(input, resp);
-    setProcessing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processing, exchanges, activeEnemy, handleGMResponse, pushExchange]);
 
