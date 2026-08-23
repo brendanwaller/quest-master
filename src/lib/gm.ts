@@ -93,6 +93,10 @@ export async function callGM(ctx: GMContext, playerInput: string): Promise<GMRes
         ],
         temperature: 0.9,
         max_tokens: 900,
+        // Ox Alpha's mandatory reasoning defaults to "max" effort, which is
+        // very slow (~22 tok/s) and can hang on a long narration. "low" keeps
+        // the frontier quality while staying responsive enough for a game loop.
+        reasoning_effort: "low",
         response_format: { type: "json_object" },
       }),
     });
