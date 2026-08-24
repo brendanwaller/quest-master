@@ -59,10 +59,19 @@ function buildUserPrompt(ctx: GMContext, playerInput: string): string {
 }
 
 export async function callGM(ctx: GMContext, playerInput: string): Promise<GMResponse> {
-  // If no API key is configured, don't waste the frontier timeout (up to 60s)
-  // before falling back. Go straight to the deterministic engine.
+  // Determine how to reach the GM model:
+  //  - If a proxy URL is configured, call it (key stays server-side, safe for
+  //    a public static deploy).
+  //  - Otherwise fall back to calling OpenRouter directly with a browser key,
+  //    but ONLY if one is present (local dev). If neither, use the offline
+  //    engine so the app never breaks.
+  const proxyUrl = import.meta.env.VITE_OPENROUTER_PROXY || "";
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
-  if (!apiKey) {
+  const targetUrl = proxyUrl || OPENROUTER_URL;
+
+  // If no key and no proxy, don't waste the frontier timeout (up to 60s)
+  // before falling back. Go straight to the deterministic engine.
+  if (!proxyUrl && !apiKey) {
     const fb = fallbackGM(ctx, playerInput);
     return { ...fb, fromFallback: true };
   }
@@ -77,14 +86,17 @@ export async function callGM(ctx: GMContext, playerInput: string): Promise<GMRes
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 60000); // 60s cap
 
-    const res = await fetch(OPENROUTER_URL, {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Title": "Quest Master",
+    };
+    // Direct calls attach the browser key; proxy calls do NOT (the worker owns it).
+    if (!proxyUrl && apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+    const res = await fetch(targetUrl, {
       method: "POST",
       signal: ctrl.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "X-Title": "Quest Master",
-      },
+      headers,
       body: JSON.stringify({
         model: MODEL,
         messages: [

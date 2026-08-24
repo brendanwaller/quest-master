@@ -1,0 +1,6 @@
+name = "quest-master-gm-proxy"
+main = "proxy.ts"
+compatibility_date = "2026-08-23"
+workers_dev = true
+
+# The OpenRouter key is set via: npx wrangler secret put OPENROUTER_API_KEY
